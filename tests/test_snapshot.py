@@ -52,6 +52,13 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(self.path.parent.stat().st_mode), 0o700)
 
+    def test_large_partial_read_is_rejected_without_data_loss(self):
+        history = [sample(i) for i in range(4, 54)]
+        self.sync(history)
+        with self.assertRaisesRegex(ValueError, "over 10%"):
+            self.sync(history[:10])
+        self.assertEqual(snapshot_summary(self.path, source_id="fake-sheet-id")["rows"], 50)
+
     def test_nonfinite_rejected(self):
         with self.assertRaises(ValueError):
             self.sync([sample(4, value=float("nan"))])

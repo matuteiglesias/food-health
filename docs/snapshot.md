@@ -25,3 +25,7 @@ No historical CSV records are replayed. No Google Sheets updates or scheduler ar
 Worksheet row indices can change after insertion/deletion. They are provenance locators, not immutable event IDs.
 Row moves will show as updates/removals in a full-snapshot diff. If a request fails before
 writing the local snapshot, previous state is preserved.
+
+For established datasets (20+ rows), the sync rejects removal of more than 10%
+of existing rows in a single run. Investigate incomplete reads rather than
+forcing a large deletion.

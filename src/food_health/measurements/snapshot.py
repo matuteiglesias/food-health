@@ -135,6 +135,14 @@ def sync_snapshot(
                 )
                 updated += 1
         removed_rows = existing.keys() - indexed.keys()
+        # Fail closed on unexpectedly truncated reads: never erase most of an
+        # established history because an upstream response was incomplete.
+        # Small fixture/sheet edits below 20 rows can be freely reconciled.
+        if len(existing) >= 20 and len(removed_rows) > max(5, len(existing) // 10):
+            raise ValueError(
+                "Snapshot would remove over 10% of historical rows; "
+                "check Google Sheets read completeness before retrying"
+            )
         for row_no in removed_rows:
             db.execute(
                 """DELETE FROM measured_observations
