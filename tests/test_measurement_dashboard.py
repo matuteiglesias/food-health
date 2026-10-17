@@ -97,6 +97,23 @@ class DashboardTests(unittest.TestCase):
 
 
 class ChartGapTests(unittest.TestCase):
+    def test_ratio_and_other_date_lines_have_visible_gaps(self):
+        from datetime import date
+        import matplotlib.pyplot as plt
+        from food_health.measurements.dashboard import _plot_gapped_line
+
+        days=[date(2023,1,1),date(2023,1,2),
+              date(2023,8,1),date(2023,8,2)]
+        fig, ax=plt.subplots()
+        try:
+            _plot_gapped_line(ax,days,[1.1,1.2,1.3,1.4],
+                              max_gap_days=30,marker=".",label="ratio")
+            self.assertEqual(len(ax.lines),2)
+            self.assertEqual(len(ax.lines[0].get_xdata()),2)
+            self.assertEqual(len(ax.lines[1].get_xdata()),2)
+        finally:
+            plt.close(fig)
+
     def test_rolling_line_does_not_connect_unmeasured_months(self):
         from datetime import date, timedelta
         import matplotlib.pyplot as plt
