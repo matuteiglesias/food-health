@@ -129,7 +129,7 @@ def parse_catalog(values: list[list]) -> dict[str, dict]:
     """
     if not values:
         raise ValueError("Empty nutrient catalog")
-    cols = _header(values, {"ID", "name", *NUTRIENTS_PER_100G})
+    cols = _header(values, {"ID", "name", "Food Group", *NUTRIENTS_PER_100G})
     out = {}
     for row_idx, row in enumerate(values[1:], start=2):
         food_id = _id(_field(row, cols["ID"]))
@@ -141,6 +141,7 @@ def parse_catalog(values: list[list]) -> dict[str, dict]:
             raise ValueError(f"Duplicate food ID at source row {row_idx}")
         out[food_id] = {
             "name": str(_field(row, cols["name"]) or ""),
+            "group": str(_field(row, cols["Food Group"]) or ""),
             "per_100g": {
                 field: _nonnegative(_field(row, cols[field]), field, allow_missing=True)
                 for field in NUTRIENTS_PER_100G
