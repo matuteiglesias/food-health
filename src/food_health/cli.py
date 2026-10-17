@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--height-m", type=float, help="Optional height in meters for BMI")
     parser.add_argument("--output-dir", type=Path, help="Private destination directory for dashboard")
     parser.add_argument("--no-legacy-activity", action="store_true", help="Skip archived 2022–2023 activity plot")
+    parser.add_argument("--include-estimates", action="store_true", help="Plot observed plus inferred missing fields in a separate private Atlas")
     parser.add_argument("--legacy-goals-file", type=Path, help="Explicit opt-in: compare against archived goal CSV (not current goals)")
     args = parser.parse_args(argv)
     root = args.root.resolve()
@@ -134,18 +135,41 @@ def main(argv: list[str] | None = None) -> int:
         from .measurements.snapshot import load_snapshot
         from .measurements.dashboard import generate_dashboard
 
-        out = args.output_dir or (root / ".local" / "reports" / "measurement-atlas")
+        variant = "measurement-atlas-enriched" if args.include_estimates else "measurement-atlas"
+        out = args.output_dir or (root / ".local" / "reports" / variant)
         # This repository is public. Never write personal report content to a
         # user-supplied path outside the ignored .local hierarchy.
         if not out.resolve().is_relative_to((root / ".local").resolve()):
             raise ValueError("Private dashboard output must be inside <root>/.local/")
-        records = load_snapshot(db_path, source_id=source_id)
+        estimated_fields = 0
+        if args.include_estimates:
+            from .measurements.enriched_view import enrichment_path, load_enriched_view
+            view = load_enriched_view(
+                db_path, source_id=source_id, output_path=enrichment_path(root)
+            )
+            # Reuse the same charts over values available on source dates.
+            # This is a plotting projection only: authoritative observations
+            # and per-field provenance stay intact in the separate sidecar.
+            estimated_fields = sum(len(row["estimated"]) for row in view)
+            records = [
+                {"source_row": row["source_row"], "date": row["date"],
+                 "observed": row["values"]}
+                for row in view
+            ]
+        else:
+            records = load_snapshot(db_path, source_id=source_id)
         archive_activity = root / "archive" / "legacy" / "legacy_23" / "volume.csv"
         activity_file = None if args.no_legacy_activity else archive_activity
-        receipt = generate_dashboard(records, output_dir=out, height_m=args.height_m, activity_file=activity_file, goals_file=args.legacy_goals_file)
+        receipt = generate_dashboard(
+            records, output_dir=out, height_m=args.height_m,
+            activity_file=activity_file, goals_file=args.legacy_goals_file,
+            data_mode="enriched" if args.include_estimates else "observed",
+            estimated_value_count=estimated_fields,
+        )
         print(f"PRIVATE dashboard: {receipt['index']}")
         print(f"observed_source_rows={receipt['source_rows']} figures={receipt['figures']} archived_activity_days={receipt['activity_rows']}")
-        print("No Google Sheets access/write; no missing-date imputation")
+        print(f"estimated_values_used={estimated_fields} mode={'enriched' if args.include_estimates else 'observed'}")
+        print("No Google Sheets access/write; no missing-date interpolation")
         return 0
 
     if args.command == "measurements-report":
