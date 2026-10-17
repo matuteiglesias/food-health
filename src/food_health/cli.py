@@ -16,10 +16,11 @@ def _sheet_id(explicit_id: str | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="food-health")
-    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary"])
+    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--db", type=Path, help="Private local SQLite snapshot path")
     parser.add_argument("--sheet-id", help="Canonical spreadsheet ID (prefer private environment)")
+    parser.add_argument("--height-m", type=float, help="Optional height in meters for BMI")
     args = parser.parse_args(argv)
     root = args.root.resolve()
 
@@ -53,6 +54,17 @@ def main(argv: list[str] | None = None) -> int:
             f"duplicate_dates={result.duplicate_dates}"
         )
         print("Canonical Google Sheet not modified; private local state updated")
+        return 0
+
+    if args.command == "measurements-report":
+        from .measurements.snapshot import load_snapshot
+        from .measurements.report import build_measurement_report, save_private_report
+
+        records = load_snapshot(db_path, source_id=source_id)
+        report = build_measurement_report(records, height_m=args.height_m)
+        target = root / ".local" / "reports" / "measurements.json"
+        save_private_report(target, report)
+        print(f"Private report generated: {target} ({len(records)} observed rows)")
         return 0
 
     from .measurements.snapshot import snapshot_summary

@@ -168,7 +168,7 @@ def snapshot_summary(
     path = Path(db_path)
     if not path.exists():
         raise FileNotFoundError(f"private local snapshot not found: {path}")
-    db = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    db = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
     try:
         row = db.execute(
             """SELECT COUNT(*), MIN(observation_date), MAX(observation_date),
@@ -181,5 +181,28 @@ def snapshot_summary(
             "rows": row[0], "first_date": row[1], "last_date": row[2],
             "duplicate_dates": row[0]-row[3],
         }
+    finally:
+        db.close()
+
+def load_snapshot(
+    db_path: str | Path, *, source_id: str, worksheet: str = "MEDIDAS"
+) -> list[dict]:
+    """Return recorded observations from private SQLite for local-only analysis."""
+    path = Path(db_path)
+    if not path.exists():
+        raise FileNotFoundError(f"private local snapshot not found: {path}")
+    db = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+    try:
+        rows = db.execute(
+            """SELECT source_row, observation_date, observed_json
+               FROM measured_observations
+               WHERE source_id=? AND worksheet=?
+               ORDER BY observation_date, source_row""",
+            (source_id, worksheet),
+        ).fetchall()
+        return [
+            {"source_row": int(row), "date": day, "observed": json.loads(payload)}
+            for row, day, payload in rows
+        ]
     finally:
         db.close()
