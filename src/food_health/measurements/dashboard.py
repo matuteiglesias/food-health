@@ -82,6 +82,24 @@ def _line(ax, series, *, colour: str = "#0D7280", label: str = "Observed"):
     _style(ax)
 
 
+def _plot_gapped_line(ax, dates, values, *, max_gap_days=30, **kwargs):
+    """Never visually connect observations separated by long missing periods."""
+    import pandas as pd
+    d = pd.to_datetime(dates)
+    if len(d) != len(values):
+        raise ValueError("Line dates and values must have equal length")
+    if not len(d):
+        return
+    left = 0
+    for right in range(1, len(d) + 1):
+        if right == len(d) or (d[right] - d[right - 1]).days > max_gap_days:
+            options = dict(kwargs)
+            if left > 0:
+                options["label"] = "_nolegend_"
+            ax.plot(d[left:right], values[left:right], **options)
+            left = right
+
+
 def _rolling(ax, records, field: str):
     from .trends import rolling_observed_mean
     import pandas as pd
@@ -89,16 +107,8 @@ def _rolling(ax, records, field: str):
     if trend:
         dates = pd.to_datetime([r["date"] for r in trend])
         means = [r["mean"] for r in trend]
-        # A mathematically valid rolling mean may restart after a long gap,
-        # but connecting two disjoint segments falsely implies observation.
-        # Break the line whenever adjacent smoothed points are >30 days apart.
-        left = 0
-        for right in range(1, len(trend) + 1):
-            if right == len(trend) or (dates[right] - dates[right - 1]).days > 30:
-                ax.plot(dates[left:right], means[left:right], color="#EF8A49",
-                        lw=2, label="Trailing 30 days (observed days only)"
-                        if left == 0 else "_nolegend_")
-                left = right
+        _plot_gapped_line(ax, dates, means, max_gap_days=30, color="#EF8A49",
+                         lw=2, label="Trailing 30 days (observed days only)")
 
 
 def _overview(folder, daily, records):
@@ -193,7 +203,8 @@ def _ratios(folder,daily):
     for name in names:
         if name in daily and daily[name].notna().sum()>=3:
             v=daily[name].dropna()
-            ax.plot(v.index,v.values,marker=".",lw=.9,alpha=.9,label=name)
+            _plot_gapped_line(ax,v.index,v.values,max_gap_days=30,
+                                 marker=".",lw=.9,alpha=.9,label=name)
     _style(ax);ax.legend(loc="best",fontsize=9)
     ax.set_title("Anthropometric proportions | WHR legacy = Hips / Waist (NOT clinical Waist / Hips)",
                  loc="left",weight="bold")
@@ -253,18 +264,20 @@ def _activity_plots(folder,activity_path):
     activity=load_legacy_activity(activity_path)
     weekly=activity.resample("W-SUN").sum()
     fig,axs=plt.subplots(2,1,figsize=(13.5,8),layout="constrained")
-    weekly.plot(ax=axs[0],linewidth=1.0)
-    axs[0].set_title("Weekly recorded activity days (archived 2022–2023, NOT current training)",loc="left")
+    for channel in CHANNELS:
+        # A blank source week has no recorded activity; it is not verified
+        # zero activity, so show a gap instead of a false zero-valued line.
+        observed=weekly[channel].where(weekly[channel]>0)
+        axs[0].plot(observed.index,observed.values,marker=".",linewidth=1,label=channel)
+    axs[0].legend()
+    axs[0].set_title("Weeks with activity recorded (blank weeks UNKNOWN; 2022–2023 only)",loc="left")
     _style(axs[0])
     marked=activity[activity["Resistance"]>0]
     if len(marked):
-        # Preserve weekday and ISO week independently (simple scatter calendar).
         dates=marked.index
-        iso=dates.isocalendar()
-        x=dates.year+ (dates.dayofyear-1)/366
-        axs[1].scatter(x,dates.dayofweek,s=22,c="#0D7280",marker="s",alpha=.75)
+        axs[1].scatter(dates,dates.dayofweek,s=22,c="#0D7280",marker="s",alpha=.75)
         axs[1].set_yticks(range(7),["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
-        axs[1].set_xlabel("Year + fraction of year")
+        axs[1].set_xlabel("Historical calendar date")
     axs[1].set_title("Resistance recorded days by weekday (missing logs ≠ inactivity)",loc="left")
     _style(axs[1])
     fig.suptitle("Historical training activity | old volume.csv",fontsize=16,weight="bold")
