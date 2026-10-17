@@ -58,7 +58,10 @@ interpreted as today's training/health objective or as an endorsed target.
 ## What each plot means
 
 - The 16 raw metric panels show observation dates, trailing 30-calendar-day
-  mean over actually observed dates (minimum three distinct observed days),
+  mean over actually observed dates (minimum three distinct observed days).
+  **The trend line is broken across intervals longer than 30 days without a
+  computed observation**, preventing misleading continuity.
+  A recency table shows the latest actual observation date for each field,
   sequential-month boxplots and overlaid day-of-year trajectories.
 - Two physical columns both originally headed `Butt` are represented
   independently (`Butt` and `Butt#2`); the source has not established
