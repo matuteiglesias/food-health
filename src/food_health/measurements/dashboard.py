@@ -126,7 +126,7 @@ def _coverage(folder, raw, fields):
     return _save(fig,folder,"coverage.png")
 
 
-def _field_chart(folder, daily, records, field: str):
+def _field_chart(folder, daily, records, field: str, historical_goals=None):
     plt, mdates, np = _mpl()
     import pandas as pd
     values=daily[field].dropna()
@@ -135,6 +135,9 @@ def _field_chart(folder, daily, records, field: str):
     fig,axs=plt.subplots(3,1,figsize=(14,11.8),layout="constrained")
     _line(axs[0],values)
     _rolling(axs[0],records,field)
+    if historical_goals is not None and field in historical_goals:
+        axs[0].axhline(historical_goals[field], color="#7753A1", lw=1,
+                       linestyle="--", label="Historical goal (opt-in, not current)")
     axs[0].legend(fontsize=8,loc="best")
     axs[0].set_title("Observation dates + trailing average (no filled days)",loc="left")
     # Sequential year-month boxes, last 24 *months with observations*.
@@ -191,7 +194,7 @@ def _ratios(folder,daily):
 def _weekly_and_change(folder,daily):
     from .plot_data import weekly_stats,two_month_changes
     plt,_,_=_mpl()
-    fig,axs=plt.subplots(3,1,figsize=(14,10),layout="constrained")
+    fig,axs=plt.subplots(4,1,figsize=(14,12),layout="constrained")
     for ax,field in zip(axs[:2],("Weight","Waist")):
         if field in daily:
             weekly=weekly_stats(daily,field)
@@ -199,12 +202,13 @@ def _weekly_and_change(folder,daily):
             ax.axhline(0,lw=1,color="#333")
         ax.set_title(f"{_label(field)} | week-to-week mean difference; weeks lacking measurements excluded",loc="left")
         _style(ax)
-    if "Weight" in daily:
-        values=two_month_changes(daily)
-        axs[2].plot(values.index,values["delta_2bins"],marker="o",markersize=3,lw=1.0)
-        axs[2].axhline(0,lw=1,color="#333")
-    axs[2].set_title("Weight | 2 × 30-day bin difference (observed bins only)",loc="left")
-    _style(axs[2])
+    for ax, bin_days in zip(axs[2:],(18,30)):
+        if "Weight" in daily:
+            values=two_month_changes(daily,bin_days=bin_days)
+            ax.plot(values.index,values["delta_2bins"],marker="o",markersize=3,lw=1)
+            ax.axhline(0,lw=1,color="#333")
+        ax.set_title(f"Weight | 2 × {bin_days}-day bin difference (observed bins only)",loc="left")
+        _style(ax)
     fig.suptitle("Change diagnostics | sampling varies over time",fontsize=15,weight="bold")
     return _save(fig,folder,"changes.png")
 
@@ -258,6 +262,38 @@ def _activity_plots(folder,activity_path):
     return _save(fig,folder,"historical-activity.png"),len(activity)
 
 
+def _correlation_matrix(folder,daily,fields):
+    plt,_,np=_mpl()
+    cols=[f for f in fields if f in daily and daily[f].notna().sum()>=8]
+    if len(cols)<3:
+        return None
+    corr=daily[cols].corr(min_periods=8).to_numpy()
+    masked=np.ma.masked_invalid(corr)
+    fig,ax=plt.subplots(figsize=(11,9),layout="constrained")
+    image=ax.imshow(masked,cmap="coolwarm",vmin=-1,vmax=1,interpolation="nearest")
+    ax.set_xticks(range(len(cols)),[_label(f) for f in cols],rotation=45,ha="right",fontsize=8)
+    ax.set_yticks(range(len(cols)),[_label(f) for f in cols],fontsize=8)
+    fig.colorbar(image,ax=ax,shrink=.7,label="Pearson r (paired measured dates only)")
+    ax.set_title("Exploratory correlations | pairwise available dates, no causal inference",
+                 loc="left",weight="bold")
+    return _save(fig,folder,"correlation-matrix.png")
+
+
+def _goals_chart(folder, comparison):
+    plt,_,np=_mpl()
+    fig,ax=plt.subplots(figsize=(11,max(4,len(comparison)*.42)),layout="constrained")
+    names=[r["metric"] for r in comparison]
+    pct=[100*(r["recent_mean"]-r["goal"])/r["goal"] for r in comparison]
+    ax.barh(range(len(names)),pct,color="#75869c",alpha=.8)
+    ax.set_yticks(range(len(names)),[_label(n) for n in names])
+    ax.axvline(0,color="#222",lw=1)
+    ax.set_xlabel("Recent observed mean relative to HISTORICAL goal (%)")
+    ax.set_title("Legacy goals | explicit opt-in only; NOT current prescriptions",
+                 loc="left",weight="bold")
+    _style(ax)
+    return _save(fig,folder,"historical-goals.png")
+
+
 def _write_index(folder, sections, raw, daily, extra):
     # All report contents stay PRIVATE; local HTML only links relative PNG files.
     def group(label, items):
@@ -268,6 +304,31 @@ def _write_index(folder, sections, raw, daily, extra):
         )
         return f'<section><h2>{escape(label)} <small>{len(items)} plots</small></h2><div class="gallery">{entries}</div></section>'
     content="".join(group(title, items) for title,items in sections.items())
+    comparisons=extra.get("period_comparisons",[])
+    yearly=extra.get("yearly_summary",[])
+    def table_row(parts):
+        return "<tr>"+"".join("<td>"+escape(str(part))+"</td>" for part in parts)+"</tr>"
+    if comparisons:
+        rows="".join(table_row([
+            _label(row["metric"]),row["previous_observed_days"],
+            row["current_observed_days"],f'{row["previous_mean"]:.2f}',
+            f'{row["current_mean"]:.2f}',f'{row["change"]:+.2f}'
+        ]) for row in comparisons)
+        content+='<section><h2>Latest 90-day comparison</h2><p>Two consecutive 90-calendar-day windows ending at the last observed date. Means are computed only from measured dates; unequal counts can limit comparability.</p><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Prior days</th><th>Recent days</th><th>Prior mean</th><th>Recent mean</th><th>Change</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'
+    if yearly:
+        rows="".join(table_row([
+            _label(row["metric"]),row["year"],row["observed_days"],
+            f'{row["mean"]:.2f}',f'{row["first"]:.2f}',f'{row["last"]:.2f}'
+        ]) for row in yearly)
+        content+='<section><details><summary>Annual descriptive table (expand)</summary><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Year</th><th>Days</th><th>Mean</th><th>First</th><th>Last</th></tr></thead><tbody>'+rows+'</tbody></table></div></details></section>'
+    legacy=extra.get("legacy_goals_comparison",[])
+    if legacy:
+        rows="".join(table_row([
+            _label(row["metric"]),row["observed_days"],
+            f'{row["recent_mean"]:.2f}',f'{row["goal"]:.2f}',
+            f'{row["gap"]:+.2f}',f'{row["forty_pct_step"]:.2f}'
+        ]) for row in legacy)
+        content+='<section><details><summary>OPT-IN historical goals comparison (not current targets)</summary><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Days</th><th>Observed</th><th>Old goal</th><th>Gap</th><th>40% step (old formula)</th></tr></thead><tbody>'+rows+'</tbody></table></div></details></section>'
     first=raw["date"].min().date().isoformat()
     last=raw["date"].max().date().isoformat()
     html=f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -284,7 +345,8 @@ section{{margin-top:44px}}h2{{border-bottom:1px solid #cad4d8;padding-bottom:10p
 small{{color:#72858b;font-weight:400;font-size:14px}}.gallery{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,450px),1fr));gap:19px}}
 .tile{{background:white;border:1px solid #dae0e2;border-radius:9px;overflow:hidden;box-shadow:0 4px 20px #253b440a}}
 .tile img{{width:100%;display:block;object-fit:contain;max-height:490px;background:white}}
-.caption{{font-size:14px;padding:9px 16px;color:#324e57}}footer{{color:#70848b;margin-top:40px}}
+.caption{{font-size:14px;padding:9px 16px;color:#324e57}}
+.table-wrap{{overflow:auto;background:white;padding:16px;border-radius:9px}}table{{border-collapse:collapse;width:100%;min-width:650px}}th,td{{text-align:left;border-bottom:1px solid #e0e5e7;padding:7px 12px}}th{{background:#e8f1f3}}details summary{{cursor:pointer;font-size:18px;font-weight:650;padding:12px}}footer{{color:#70848b;margin-top:40px}}
 </style></head><body><header><h1>Measurement Atlas</h1>
 <p>Rebuilt from the canonical Personal Measurements spreadsheet and private local SQLite. Every chart is generated from observed values unless explicitly labeled as derived or a descriptive in-sample regression.</p>
 <div class="stats"><div class="stat"><strong>{len(raw)}</strong>source observation rows</div>
@@ -302,7 +364,7 @@ small{{color:#72858b;font-weight:400;font-size:14px}}.gallery{{display:grid;grid
     return target
 
 
-def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None):
+def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None, goals_file=None):
     """Generate rich, privacy-preserving HTML/PNG atlas from SQLite records."""
     from .plot_data import observed_frames,observation_counts
     plt,_,_=_mpl()
@@ -314,6 +376,12 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
     output.mkdir(parents=True,exist_ok=True,mode=0o700)
     os.chmod(output,0o700)
     raw,daily=observed_frames(records,height_m=height_m)
+    historical_goals=None
+    comparison=[]
+    if goals_file is not None:
+        from .goals import load_goal_values,compare_goals
+        historical_goals=load_goal_values(goals_file)["goals"]
+        comparison=compare_goals(daily,historical_goals)
     observed_fields=[field for field in METRICS if field in raw and raw[field].notna().sum()>=3]
     sections=defaultdict(list)
     sections["Overview"].append(("Observed trajectories",_overview(output,daily,records)))
@@ -321,8 +389,13 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
     sections["Overview"].append(("Body composition (estimates)",_body_comp(output,daily)))
     sections["Overview"].append(("Anthropometric ratios",_ratios(output,daily)))
     sections["Overview"].append(("Changes in time (observed bins)",_weekly_and_change(output,daily)))
+    cor_name=_correlation_matrix(output,daily,["Weight","Body Fat","Muscle","Waist","Belly","Hips","Chest","Arm"])
+    if cor_name:
+        sections["Overview"].append(("Pairwise correlation matrix (exploratory)",cor_name))
+    if comparison:
+        sections["Historical goals (explicit opt-in)"].append(("Old goals vs measured data",_goals_chart(output,comparison)))
     for field in observed_fields:
-        name=_field_chart(output,daily,records,field)
+        name=_field_chart(output,daily,records,field,historical_goals=historical_goals)
         if name:sections["Individual measurements"].append((_label(field),name))
     for x,y,degree in RELATIONS:
         name=_relationship(output,daily,x,y,degree=degree)
@@ -331,7 +404,13 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
     if activity_file is not None and Path(activity_file).is_file():
         name,activity_rows=_activity_plots(output,activity_file)
         sections["Archived activity"].append(("Recorded activity 2022–2023 only",name))
+    from .analysis_tables import yearly_summary,period_comparisons,pairwise_correlations
+    tables_fields=[x for x in METRICS if x in daily]
     metadata={
+        "period_comparisons":period_comparisons(daily,tables_fields),
+        "yearly_summary":yearly_summary(daily,tables_fields),
+        "pairwise_correlations":pairwise_correlations(daily,["Weight","Body Fat","Muscle","Waist","Belly","Hips","Chest","Arm"]),
+        "legacy_goals_comparison":comparison,
         "schema_version": 1,
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "Personal Measurements / MEDIDAS · private SQLite projection",
