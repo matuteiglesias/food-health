@@ -136,7 +136,7 @@ class ChartGapTests(unittest.TestCase):
             for line in ax.lines:
                 xs=list(line.get_xdata())
                 self.assertLessEqual(
-                    max((xs[i]-xs[i-1]).days for i in range(1,len(xs)))
+                    max((__import__("pandas").Timestamp(xs[i])-__import__("pandas").Timestamp(xs[i-1])).days for i in range(1,len(xs)))
                     if len(xs)>1 else 0,
                     30,
                 )
