@@ -99,12 +99,12 @@ def main(argv: list[str] | None = None) -> int:
         from .measurements.snapshot import load_snapshot
         from .measurements.dashboard import generate_dashboard
 
-        records = load_snapshot(db_path, source_id=source_id)
         out = args.output_dir or (root / ".local" / "reports" / "measurement-atlas")
         # This repository is public. Never write personal report content to a
         # user-supplied path outside the ignored .local hierarchy.
         if not out.resolve().is_relative_to((root / ".local").resolve()):
             raise ValueError("Private dashboard output must be inside <root>/.local/")
+        records = load_snapshot(db_path, source_id=source_id)
         archive_activity = root / "archive" / "legacy" / "legacy_23" / "volume.csv"
         activity_file = None if args.no_legacy_activity else archive_activity
         receipt = generate_dashboard(records, output_dir=out, height_m=args.height_m, activity_file=activity_file, goals_file=args.legacy_goals_file)
