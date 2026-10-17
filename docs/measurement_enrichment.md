@@ -78,7 +78,11 @@ For each route:
 4. Estimate a conservative *heuristic* predictive range based on historical
    validation errors, local target dispersion, and increasing staleness
    (for targets last observed years ago). This is NOT calibrated 90% coverage
-   and is not a Bayesian posterior.
+   and is not a Bayesian posterior. The projection also carries a **separate**
+   kernel-weighted empirical conditional CDF with p10, p50, and p90 of the
+   historical local source values. Those quantiles describe the training
+   neighborhood; they are **uncalibrated** and must not be confused with the
+   wider predictive range or clinical uncertainty.
 
 Candidate routes are ranked on their historical holdout results; this is a
 screening/selection strategy, **not** a final unbiased generalization estimate.
