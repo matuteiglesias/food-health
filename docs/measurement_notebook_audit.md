@@ -73,3 +73,15 @@ Historical objective lines and old calorie conjectures are not current goals.
 - A visual side-by-side review of the representative legacy figures, dates
   and sample counts should precede any notebook retirement. No originals
   have been modified or removed.
+
+## Post-ingest inference addendum
+
+The `measurements.enrichment` and `measurements.enriched_view` modules
+implement a fresh same-row kernel predictor graph and uncertainty-rich,
+missing-only sidecar. This covers the useful *intent* behind historical
+quadratic fill (02 cells 6–8) without changing the source values, inventing
+dates, or treating 2023 old-scale readings as 2026 measurements. Cell 13
+group-based Body Fat/Muscle fill is **functionally subsumed** by multi-route
+kernel estimates but has **not** been independently shown numerically
+equivalent; legacy stochastic simulation in cells 11–12 remains explicitly
+deferred. Notebook retirement is still gated on reviewing this behavior.
