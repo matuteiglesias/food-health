@@ -16,7 +16,7 @@ def _sheet_id(explicit_id: str | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="food-health")
-    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report"])
+    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report", "food-sync", "food-summary"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--db", type=Path, help="Private local SQLite snapshot path")
     parser.add_argument("--sheet-id", help="Canonical spreadsheet ID (prefer private environment)")
@@ -34,6 +34,42 @@ def main(argv: list[str] | None = None) -> int:
             print(f"legacy_original_files: {len(data.get('files', []))}")
         print("measurements_source: Google Sheets / Personal Measurements (canonical, read-only)")
         print("Doctor does no network access and no source writes")
+        return 0
+
+    if args.command in ("food-sync", "food-summary"):
+        from .nutrition.private_snapshot import (
+            private_summary, read_private_snapshot, write_private_snapshot,
+        )
+
+        path = root / ".local" / "food-stock.json"
+        if args.command == "food-sync":
+            from .nutrition.google_sheets import fetch_food_and_stock
+            from .nutrition.composition import composition
+
+            snapshot = fetch_food_and_stock()
+            plan = snapshot["plan"]
+            # Validate the full intended nutrient calculation before replacing
+            # the prior private snapshot. Do not interpret plans as consumption.
+            composition(snapshot["catalog"], plan["items"], period_days=plan["period_days"])
+            changed = write_private_snapshot(path, snapshot)
+            result = private_summary(snapshot)
+            print(
+                f"plan_active_rows={result['plan_active_rows']} "
+                f"reference_foods={result['reference_foods']} "
+                f"stock_rows={result['stock_rows']} "
+                f"changed={str(changed).lower()}"
+            )
+            print("Source Sheets unchanged; stock snapshot currentness is unverified")
+            return 0
+
+        result = private_summary(read_private_snapshot(path))
+        print(
+            f"plan_active_rows={result['plan_active_rows']} "
+            f"reference_foods={result['reference_foods']} "
+            f"stock_rows={result['stock_rows']} "
+            f"stock_heading={result['stock_heading']} "
+            "stock_currentness=unverified"
+        )
         return 0
 
     source_id = _sheet_id(args.sheet_id)
