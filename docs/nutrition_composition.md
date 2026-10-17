@@ -34,6 +34,7 @@ but an **active** unmapped food is rejected rather than silently dropped.
 - Preserves calorie, carbohydrate, fat, protein, fiber, cholesterol, saturated-fat
   units from the source catalog.
 - Source `cant` is **total grams over N days**, not grams per day.
+- Unknown catalog nutrients (`NULL`, `NaN`, blank) remain `None`, never zero; composition fails when a selected ingredient needs a missing nutrient.
 - No hard-coded nutritional targets or optimization objective.
 - No mutation of the original CSVs, Google Sheets or personal measurements.
 - Existing `Food` Google Sheet is still the intended curated source; a future
