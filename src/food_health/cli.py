@@ -16,7 +16,7 @@ def _sheet_id(explicit_id: str | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="food-health")
-    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report", "measurements-dashboard", "food-sync", "food-summary"])
+    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report", "measurements-dashboard", "measurements-enrich", "measurements-enrichment-summary", "food-sync", "food-summary"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--db", type=Path, help="Private local SQLite snapshot path")
     parser.add_argument("--sheet-id", help="Canonical spreadsheet ID (prefer private environment)")
@@ -93,6 +93,41 @@ def main(argv: list[str] | None = None) -> int:
             f"duplicate_dates={result.duplicate_dates}"
         )
         print("Canonical Google Sheet not modified; private local state updated")
+        # The second, derived projection is recalculated only when its source
+        # fingerprint changes. A failure leaves canonical values intact and
+        # makes any previous estimate artifact fail the staleness check.
+        from .measurements.enriched_view import enrichment_path, refresh_enrichment
+        enriched = refresh_enrichment(
+            db_path, source_id=source_id, output_path=enrichment_path(root)
+        )
+        print(
+            f"enrichment_rows={enriched['input_rows']} "
+            f"estimates={enriched['estimation_count']} "
+            f"derived_changed={str(enriched['changed']).lower()}"
+        )
+        return 0
+
+    if args.command in ("measurements-enrich", "measurements-enrichment-summary"):
+        from .measurements.enriched_view import (
+            enrichment_path, refresh_enrichment, load_enriched_view
+        )
+        out = enrichment_path(root)
+        if args.command == "measurements-enrich":
+            receipt = refresh_enrichment(db_path, source_id=source_id, output_path=out)
+            print(
+                f"enrichment_rows={receipt['input_rows']} "
+                f"estimates={receipt['estimation_count']} "
+                f"targets={receipt['target_count']} "
+                f"derived_changed={str(receipt['changed']).lower()}"
+            )
+            return 0
+        rows=load_enriched_view(db_path, source_id=source_id, output_path=out)
+        print(
+            f"enriched_rows={len(rows)} "
+            f"estimated_fields={sum(len(r['estimated']) for r in rows)} "
+            f"observed_fields={sum(len(r['observed']) for r in rows)}"
+        )
+        print("Estimates are uncertainty-qualified, not direct observations")
         return 0
 
     if args.command == "measurements-dashboard":
