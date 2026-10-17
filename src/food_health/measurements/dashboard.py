@@ -407,6 +407,8 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
         name,activity_rows=_activity_plots(output,activity_file)
         sections["Archived activity"].append(("Recorded activity 2022–2023 only",name))
     from .analysis_tables import yearly_summary,period_comparisons,pairwise_correlations
+    import hashlib
+    record_fingerprint=hashlib.sha256(json.dumps(sorted(records,key=lambda row:(row["date"],row["source_row"])),sort_keys=True,separators=(",",":")).encode("utf-8")).hexdigest()
     tables_fields=[x for x in METRICS if x in daily]
     metadata={
         "period_comparisons":period_comparisons(daily,tables_fields),
@@ -417,6 +419,7 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "Personal Measurements / MEDIDAS · private SQLite projection",
         "source_rows":len(raw),"unique_dates":len(daily),
+        "source_observation_sha256":record_fingerprint,
         "date_first":str(daily.index.min().date()),
         "date_last":str(daily.index.max().date()),
         "observed_counts":{k:int(v) for k,v in observation_counts(raw).items()},
