@@ -32,3 +32,11 @@ the user without separate rules and review.
 
 Notebook retirement status: PARTIAL. Visualizations, subjective features
 and bespoke source comparisons remain to be explicitly triaged.
+
+## Canonical catalog validation
+
+In the current 29 active Food plan lines, 28 source ingredients have a
+nonempty `Food Group` in the canonical catalog. The remaining one can still
+be ranked without a group restriction; using `same_group=True` against it
+must fail rather than silently widen the search. For a plan item with a
+specified group, the filter works against the current read-only snapshot.
