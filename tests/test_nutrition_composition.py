@@ -85,6 +85,22 @@ class CompositionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing catalog headers"):
             load_catalog(p)
 
+    def test_null_nutrient_is_missing_not_zero(self):
+        p = Path(self.tmp.name) / "missing.csv"
+        synthetic_catalog(p)
+        text = p.read_text()
+        # Precisely one synthetic nutrient is unknown in ingredient B.
+        text = text.replace("100,5,4,14,3,15,2", "100,5,4,14,NULL,15,2")
+        assert "NULL" in text
+        p.write_text(text)
+        food = load_catalog(p)
+        self.assertIsNone(food["200"]["per_100g"]["Fiber (g)"])
+        macros = ("Calories", "Carbohydrate (g)", "Fat (g)", "Protein (g)")
+        partial = composition(food, [{"food_id": "200", "grams": 100}], fields=macros)
+        self.assertAlmostEqual(partial["totals"]["Calories"], 100)
+        with self.assertRaisesRegex(ValueError, "missing nutrient value"):
+            composition(food, [{"food_id": "200", "grams": 100}])
+
     def test_catalog_not_mutated(self):
         before = self.catalog["100"]["per_100g"].copy()
         composition(self.catalog, [{"food_id": "100", "grams": 100}])

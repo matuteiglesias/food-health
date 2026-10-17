@@ -48,10 +48,15 @@ def load_catalog(
             food_id = (row.get("ID") or "").strip()
             if not food_id or food_id in result:
                 raise ValueError(f"catalog row {row_number}: missing or duplicate food ID")
-            nutrients = {
-                field: _number(row.get(field), context=f"catalog row {row_number}, {field}")
-                for field in fields
-            }
+            nutrients = {}
+            for field in fields:
+                raw = row.get(field)
+                if raw is None or str(raw).strip().upper() in {"", "NULL", "NA", "N/A", "NAN"}:
+                    # Unknown is NOT zero; only reject when this nutrient is
+                    # actually required for a selected plan ingredient.
+                    nutrients[field] = None
+                else:
+                    nutrients[field] = _number(raw, context=f"catalog row {row_number}, {field}")
             result[food_id] = {
                 "name": (row.get("name") or "").strip(),
                 "per_100g": nutrients,
@@ -107,8 +112,8 @@ def composition(
             raise ValueError(f"plan row {i}: unmapped food ID")
         ingredient = catalog[food_id]["per_100g"]
         for field in fields:
-            if field not in ingredient:
-                raise ValueError(f"plan row {i}: missing nutrient field {field}")
+            if field not in ingredient or ingredient[field] is None:
+                raise ValueError(f"plan row {i}: missing nutrient value for {field}")
             totals[field] += grams * _number(ingredient[field], context=field) / 100
         quantities[food_id] = quantities.get(food_id, 0.0) + grams
     return {
