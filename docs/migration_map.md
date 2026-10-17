@@ -1,25 +1,30 @@
-# Notebook-to-package migration map
+# Notebook migration ledger — keep original notebooks until exit gates pass
 
-| Local legacy notebook | Future capability | Gate |
-| --- | --- | --- |
-| 01 - Dias Actividad.ipynb | training.activity | Verify logged vs planned activity |
-| Measurements.ipynb | training.activity | Check duplicate of 01 |
-| 02 - interpolacion medidas.ipynb | measurements.estimates | Simulated/imputed values separate from observed |
-| 03 - plot time series.ipynb | measurements.trends | Quarterly/yearly/time-series visualizations |
-| 04 - plots_advanced.ipynb | measurements.analytics | Ratios and comparative exploratory plots |
-| dieta.ipynb | nutrition.optimize | Parameterize energy/macro goals, constraints |
-| nutrientes.ipynb | nutrition.composition | Recover composition calculations |
-| nutrientes 24.ipynb | nutrition.optimize | Deduplicate optimizers, exclude dead experiments |
-| compras.ipynb | inventory.planning | Compute stock-to-shopping requirements |
-| legacy_23/substitutes.ipynb | nutrition.substitutes | Nutrient-space similarity |
-| tickets/ocr.ipynb | receipts.extract | Optional, private receipt extraction |
-| printer dias de semana.ipynb | utils.calendar | Low priority |
+All 13 notebook files are preserved in the ignored local `archive/legacy/`.
+Cloud GitHub has no raw private files. The `Personal Measurements` Google Sheet
+is canonical; local historic CSVs are **not** replayed into it.
 
-Archive originals are available privately in `archive/legacy/`. Do not migrate notebook outputs into the public repo.
+| Original notebook | Status (2026-10-17) | New implementation | Missing exit-gate capability |
+| --- | --- | --- | --- |
+| `Measurements.ipynb` | HOLD / duplicate candidate | — | Compare plot/activity output with `01 - Dias Actividad` |
+| `01 - Dias Actividad.ipynb` | PENDING | — | Activity-day plot, input semantics |
+| `02 - interpolacion medidas.ipynb` | PARTIAL | `measurements.analytics` | Fitting, explicit estimation channel, testable parity |
+| `03 - plot time series.ipynb` | PARTIAL | `measurements.trends`, `measurements.report` | Year-by-year plots, boxplots, alternative smoothing |
+| `04 - plots_advanced.ipynb` | PARTIAL | `measurements.analytics` | Scatterplots, regression, extended comparisons |
+| `nutrientes.ipynb` | PENDING | — | Nutrient mapping, aggregation, validation |
+| `nutrientes 24.ipynb` | PENDING | — | Optimization specification and deduplication |
+| `dieta.ipynb` | PENDING | — | Constraint optimization, configurable macro targets |
+| `compras.ipynb` | PENDING | — | Stock-consumption reconciliation and shopping projection |
+| `legacy_23/substitutes.ipynb` | PENDING | — | Similarity metrics and food substitution |
+| `tickets/ocr.ipynb` | PENDING | — | Private OCR pipeline and extraction validation |
+| `printer dias de semana.ipynb` | PENDING / low priority | — | Only migrate if useful to operations |
+| `.ipynb_checkpoints/Measurements-checkpoint.ipynb` | HOLD / checkpoint | — | Classify duplicate and retain only if needed |
 
-## Acceptance gates for next PR
-- Read original Google Sheet without mutating it.
-- Test date parsing, duplicated headings, missing values and unit invariants.
-- Ensure changes in historical cells are detected, not append-only.
-- Make writes idempotent into local private state, with source provenance.
-- Test a rerun, missing credentials and partial network failure.
+## Retirement gate
+A notebook may be tagged **RETIRE-READY** only when every desired output/function
+is either covered by tests in the Python package or explicitly retired as an
+experiment, and original/synthetic parity checks pass. A notebook may then stay
+in cold archive; irreversible deletion requires separate human approval.
+
+Priorities: measurements stable -> nutrition composition/optimizer -> inventory ->
+training event logging -> receipts. Do not open all workstreams at once.
