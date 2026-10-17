@@ -1,0 +1,33 @@
+# Public repository: deny tracking private local artifacts.
+# Local archive holds historical body measurements, diet data, notebook outputs and receipts.
+/archive/legacy/
+/data/
+/.local/
+/.secrets/
+/credentials/
+/reports/private/
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.ods
+*.ipynb
+*.pdf
+*.png
+*.jpeg
+*.jpg
+*.webp
+.venv/
+dist/
+build/
+*.egg-info/
