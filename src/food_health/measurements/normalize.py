@@ -1,7 +1,9 @@
 """Pure normalization of Google Sheets MEDIDAS values; source untouched.
 
-Use only recorded anthropometric values. Blank and future-dated rows produce
-no observation. Columns with duplicated names receive stable suffixes.
+Use only recorded anthropometric values. Rows without numeric measurements
+produce no observation. Date plausibility is not validated in this layer;
+future-dated nonblank values require separate upstream data-quality checks.
+Columns with duplicated names receive stable suffixes.
 """
 from __future__ import annotations
 
