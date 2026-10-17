@@ -21,7 +21,7 @@ from typing import Mapping
 
 import numpy as np
 
-MODEL_VERSION = "observed-kernel-v1"
+MODEL_VERSION = "observed-kernel-v2"
 MIN_TRAIN = 28
 MIN_HOLDOUT = 10
 MIN_NEIGHBORS = 5.0
@@ -155,7 +155,6 @@ def _kernel_quantiles(train_x, train_y, center):
     """
     scales=np.std(train_x,axis=0)
     scales=np.where(scales>=1e-6,scales,1.0)
-    means=np.mean(train_x,axis=0)
     distances=np.sqrt(np.sum(((train_x-np.asarray(center))/scales)**2,axis=1))
     weights=np.exp(-0.5*(distances/FEATURE_BANDWIDTH)**2)
     ordering=np.argsort(train_y)
