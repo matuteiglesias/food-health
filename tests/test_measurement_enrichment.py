@@ -61,6 +61,10 @@ class ModelTests(unittest.TestCase):
                 self.assertGreater(info["validation_days"],0)
                 self.assertGreaterEqual(info["training_rows"],38)
                 self.assertEqual(info["model_version"],MODEL_VERSION)
+                dist=info["conditional_distribution"]
+                self.assertEqual(dist["method"],"kernel_weighted_empirical_cdf")
+                self.assertLessEqual(dist["p10"],dist["p50"])
+                self.assertLessEqual(dist["p50"],dist["p90"])
                 if name in BODY_DEVICE:
                     self.assertEqual(info["source_type"],"old_scale_proxy")
                     self.assertLessEqual(info["upper"],100)
