@@ -11,10 +11,10 @@ is canonical; local historic CSVs are **not** replayed into it.
 | `02 - interpolacion medidas.ipynb` | PARTIAL | `measurements.analytics` | Fitting, explicit estimation channel, testable parity |
 | `03 - plot time series.ipynb` | PARTIAL | `measurements.trends`, `measurements.report` | Year-by-year plots, boxplots, alternative smoothing |
 | `04 - plots_advanced.ipynb` | PARTIAL | `measurements.analytics` | Scatterplots, regression, extended comparisons |
-| `nutrientes.ipynb` | PENDING | — | Nutrient mapping, aggregation, validation |
-| `nutrientes 24.ipynb` | PENDING | — | Optimization specification and deduplication |
-| `dieta.ipynb` | PENDING | — | Constraint optimization, configurable macro targets |
-| `compras.ipynb` | PENDING | — | Stock-consumption reconciliation and shopping projection |
+| `nutrientes.ipynb` | PARTIAL | `nutrition.composition` | Optimization experiments, diagnostics, further nutrient outputs |
+| `nutrientes 24.ipynb` | PARTIAL | `nutrition.composition` | SciPy optimization, constrained variants, diagnostics |
+| `dieta.ipynb` | PARTIAL | `nutrition.composition` | Configurable macro-target optimizer, meal suggestions |
+| `compras.ipynb` | PARTIAL | `nutrition.composition.scale_quantities` | Stock reconciliation and shopping projection |
 | `legacy_23/substitutes.ipynb` | PENDING | — | Similarity metrics and food substitution |
 | `tickets/ocr.ipynb` | PENDING | — | Private OCR pipeline and extraction validation |
 | `printer dias de semana.ipynb` | PENDING / low priority | — | Only migrate if useful to operations |
