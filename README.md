@@ -41,3 +41,26 @@ changes and optional archive activity. Files stay under Git-ignored
 
 See `docs/measurement_atlas.md` for interpretation and options, and
 `docs/measurement_notebook_audit.md` for the explicit notebook-cell port map.
+
+
+## Post-ingest inferred measurements (separate from observations)
+
+`measurements-sync` now automatically builds a second private projection
+`.local/measurements-enriched.json` after committing the canonical SQLite.
+Its directed predictor graph uses only directly observed, same-row body
+measurements, a Gaussian kernel conditional average, historical-date
+holdouts, empirical conditional p10/p50/p90, and heuristic error ranges.
+The source Google Sheet and observed SQLite table are never overwritten.
+
+```bash
+.venv/bin/python -m food_health measurements-enrich             # offline regenerate
+.venv/bin/python -m food_health measurements-enrichment-summary # aggregate counts only
+```
+
+Python clients can opt in using
+`measurements.enriched_view.load_enriched_view(...)`; it returns
+`observed`, `estimated`, `values`, and `provenance` separately.
+The original observed-only report and dashboard stay unchanged.
+Inferences for old-scale Body Fat and Muscle are historical-device proxies
+and are *not current direct measurements*. Details and caveats:
+`docs/measurement_enrichment.md`.
