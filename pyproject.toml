@@ -13,7 +13,7 @@ dependencies = []
 reports = ["matplotlib>=3.8,<4", "numpy>=1.24", "pandas>=2.0"]
 measurements = ["pandas>=2.0", "google-auth>=2.0", "google-api-python-client>=2.0"]
 nutrition = ["numpy>=1.24", "scipy>=1.10", "pandas>=2.0"]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "matplotlib>=3.8,<4", "numpy>=1.24", "pandas>=2.0", "scipy>=1.10"]
 
 [project.scripts]
 food-health = "food_health.cli:main"
