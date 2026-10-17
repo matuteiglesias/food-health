@@ -53,13 +53,17 @@ def refresh_enrichment(db_path: str | Path, *, source_id: str,
                 existing=json.load(handle)
             if (existing.get("source_observation_sha256")==fingerprint
                     and existing.get("model_version")==MODEL_VERSION
-                    and existing.get("schema_version")==1):
+                    and existing.get("schema_version")==1
+                    and existing.get("source_id")==source_id
+                    and existing.get("worksheet")==worksheet):
                 return {"changed":False,"input_rows":existing["input_rows"],
                         "estimation_count":existing["estimation_count"],
                         "target_count":len(existing["target_diagnostics"])}
         except (ValueError, KeyError, TypeError, OSError):
             pass  # Repair corrupted/private derived artifacts by re-computing.
     result=infer_missing(rows)
+    result["source_id"]=source_id
+    result["worksheet"]=worksheet
     changed=_atomic_json(path,result)
     return {
         "changed":changed,"input_rows":result["input_rows"],
@@ -82,6 +86,8 @@ def load_enriched_view(db_path: str | Path, *, source_id: str,
         data=json.load(handle)
     if data.get("schema_version")!=1 or data.get("model_version")!=MODEL_VERSION:
         raise ValueError("Enrichment version mismatch: regenerate derived snapshot")
+    if data.get("source_id")!=source_id or data.get("worksheet")!=worksheet:
+        raise ValueError("Enrichment source/worksheet mismatch: regenerate derived snapshot")
     if data.get("source_observation_sha256")!=source_fingerprint(rows):
         raise ValueError("Stale enrichment: canonical observations changed; rerun enrich")
     estimates={item["source_row"]:item for item in data["rows"]}
