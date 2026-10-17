@@ -326,6 +326,13 @@ def _write_index(folder, sections, raw, daily, extra):
             f'{row["current_mean"]:.2f}',f'{row["change"]:+.2f}'
         ]) for row in comparisons)
         content+='<section><h2>Latest 90-day comparison</h2><p>Two consecutive 90-calendar-day windows ending at the last observed date. Means are computed only from measured dates; unequal counts can limit comparability.</p><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Prior days</th><th>Recent days</th><th>Prior mean</th><th>Recent mean</th><th>Change</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'
+    coverage=extra.get("observed_field_recency",[])
+    if coverage:
+        rows="".join(table_row([
+            _label(item["metric"]),item["observed_rows"],
+            item["last_observed_date"],item["days_behind_last_snapshot_observation"]
+        ]) for item in coverage)
+        content+='<section><details open><summary>Measurement coverage and recency by field</summary><p>Last recorded date varies by metric. Missing recent measurements are not evidence of unchanged values.</p><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Observed rows</th><th>Latest recorded</th><th>Days before latest observation</th></tr></thead><tbody>'+rows+'</tbody></table></div></details></section>'
     if yearly:
         rows="".join(table_row([
             _label(row["metric"]),row["year"],row["observed_days"],
@@ -419,7 +426,19 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
     import hashlib
     record_fingerprint=hashlib.sha256(json.dumps(sorted(records,key=lambda row:(row["date"],row["source_row"])),sort_keys=True,separators=(",",":")).encode("utf-8")).hexdigest()
     tables_fields=[x for x in METRICS if x in daily]
+    recency=[
+        {
+            "metric":name,
+            "observed_rows":int(raw[name].notna().sum()),
+            "last_observed_date":str(raw.loc[raw[name].notna(),"date"].max().date()),
+            "days_behind_last_snapshot_observation":int(
+                (raw["date"].max()-raw.loc[raw[name].notna(),"date"].max()).days
+            ),
+        }
+        for name in observed_fields
+    ]
     metadata={
+        "observed_field_recency":recency,
         "period_comparisons":period_comparisons(daily,tables_fields),
         "yearly_summary":yearly_summary(daily,tables_fields),
         "pairwise_correlations":pairwise_correlations(daily,["Weight","Body Fat","Muscle","Waist","Belly","Hips","Chest","Arm"]),
