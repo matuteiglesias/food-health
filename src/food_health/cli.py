@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--height-m", type=float, help="Optional height in meters for BMI")
     parser.add_argument("--output-dir", type=Path, help="Private destination directory for dashboard")
     parser.add_argument("--no-legacy-activity", action="store_true", help="Skip archived 2022–2023 activity plot")
+    parser.add_argument("--legacy-goals-file", type=Path, help="Explicit opt-in: compare against archived goal CSV (not current goals)")
     args = parser.parse_args(argv)
     root = args.root.resolve()
 
@@ -102,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         out = args.output_dir or (root / ".local" / "reports" / "measurement-atlas")
         archive_activity = root / "archive" / "legacy" / "legacy_23" / "volume.csv"
         activity_file = None if args.no_legacy_activity else archive_activity
-        receipt = generate_dashboard(records, output_dir=out, height_m=args.height_m, activity_file=activity_file)
+        receipt = generate_dashboard(records, output_dir=out, height_m=args.height_m, activity_file=activity_file, goals_file=args.legacy_goals_file)
         print(f"PRIVATE dashboard: {receipt['index']}")
         print(f"observed_source_rows={receipt['source_rows']} figures={receipt['figures']} archived_activity_days={receipt['activity_rows']}")
         print("No Google Sheets access/write; no missing-date imputation")
