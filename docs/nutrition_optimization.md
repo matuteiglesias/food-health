@@ -36,10 +36,9 @@ review is required before treating outputs as a food plan.
 
 ## Workstation compatibility gate
 
-The local ThinkPad currently has Python 3.10, NumPy 1.26.4 and system
-SciPy 1.8.0, which emits a compatibility warning requiring NumPy <1.25.
-The 32-suite synthetic tests and the archived-plan identity smoke passed, but
-**do not treat this as a supported runtime**. Before regular use, create an
-ignored venv with mutually compatible NumPy, SciPy and pandas versions; test
-in that venv, record versions, and only then merge/deploy this PR. Do not
-modify global system packages or share personal target values in logs.
+The global ThinkPad Python 3.10 had a mismatched SciPy 1.8.0 / NumPy 1.26.4
+installation. A project-local ignored `.venv/` was created with compatible
+Python 3.10.12, NumPy 2.2.6, SciPy 1.15.3 and pandas 2.3.3; **32 unit tests
+passed without the earlier compatibility warning**. The virtual environment
+is excluded from Git. Do not modify global packages or share personal target
+values in logs. Revalidate versions when dependencies are upgraded.
