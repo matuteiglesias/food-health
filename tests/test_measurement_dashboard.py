@@ -95,6 +95,19 @@ class DashboardTests(unittest.TestCase):
                 generate_dashboard([],output_dir=Path(td)/"private")
 
 
+
+class PrivacyGuardTests(unittest.TestCase):
+    def test_cli_refuses_unignored_public_destination_before_read(self):
+        from unittest.mock import patch
+        from food_health.cli import main
+        with tempfile.TemporaryDirectory() as td:
+            with patch.dict("os.environ", {"FOOD_HEALTH_MEASUREMENTS_SHEET_ID":"fake-id"}):
+                with self.assertRaisesRegex(ValueError, "inside <root>/.local"):
+                    main(["measurements-dashboard","--root",td,
+                          "--output-dir",str(Path(td)/"PUBLIC")])
+            self.assertFalse((Path(td)/"PUBLIC").exists())
+
+
 class ActivityTests(unittest.TestCase):
     def test_historical_day_reader(self):
         with tempfile.TemporaryDirectory() as td:
