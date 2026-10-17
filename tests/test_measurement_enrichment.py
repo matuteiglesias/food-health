@@ -123,6 +123,36 @@ class PersistenceTests(unittest.TestCase):
             corrected=load_enriched_view(db,source_id="synthetic",output_path=sidecar)
             self.assertNotEqual(corrected[-1]["observed"],original_observed)
 
+    def test_cross_source_enrichment_not_silently_reused(self):
+        with tempfile.TemporaryDirectory() as td:
+            db=Path(td)/".local"/"measurements.sqlite3"
+            sidecar=Path(td)/".local"/"measurements-enriched.json"
+            rows=scenario()
+            sync_snapshot(db,rows,source_id="first")
+            sync_snapshot(db,rows,source_id="second")
+            refresh_enrichment(db,source_id="first",output_path=sidecar)
+            with self.assertRaisesRegex(ValueError,"source/worksheet mismatch"):
+                load_enriched_view(db,source_id="second",output_path=sidecar)
+            self.assertTrue(refresh_enrichment(
+                db,source_id="second",output_path=sidecar)["changed"])
+            self.assertEqual(len(load_enriched_view(
+                db,source_id="second",output_path=sidecar)),100)
+
+    def test_sensitivity_band_widens_for_older_instrument_data(self):
+        rows=scenario()
+        # Equal weight-only query values at different future dates, same
+        # conditional distribution, different transfer staleness.
+        rows[99]["observed"]["Weight"]=rows[81]["observed"]["Weight"]
+        result=infer_missing(rows)
+        early=result["rows"][81]["estimated"]["Body Fat"]
+        late=result["rows"][99]["estimated"]["Body Fat"]
+        self.assertEqual(early["features"],late["features"])
+        self.assertEqual(early["value"],late["value"])
+        self.assertGreater(late["target_observation_staleness_days"],
+                           early["target_observation_staleness_days"])
+        self.assertGreaterEqual(late["upper"]-late["lower"],
+                                early["upper"]-early["lower"])
+
     def test_no_overwrite_even_with_weird_observed_value(self):
         rows=scenario()
         rows[-1]["observed"]["Body Fat"]=0.0
