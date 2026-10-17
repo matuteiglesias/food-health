@@ -74,6 +74,9 @@ interpreted as today's training/health objective or as an endorsed target.
   the relevant time bins; they never interpolate whole missing periods.
 - Historical recorded training occurrences come from the 2022–2023
   archived CSV, not the still-unimplemented present-day workout log.
+  Empty activity markers are unknown recording status, not proven zero
+  training; blank weeks remain visually discontinuous. Ratio trajectories
+  also break lines across long periods without measurements.
 
 ## Remaining methodological risks
 
