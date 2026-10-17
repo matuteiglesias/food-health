@@ -61,8 +61,9 @@ interpreted as today's training/health objective or as an endorsed target.
   mean over actually observed dates (minimum three distinct observed days).
   **The trend line is broken across intervals longer than 30 days without a
   computed observation**, preventing misleading continuity.
-  A recency table shows the latest actual observation date for each field,
-  sequential-month boxplots and overlaid day-of-year trajectories.
+  Each per-metric figure also includes sequential-month boxplots and overlaid
+  day-of-year trajectories. A separate recency table shows the latest actual
+  observation date for each field.
 - Two physical columns both originally headed `Butt` are represented
   independently (`Butt` and `Butt#2`); the source has not established
   their anatomical meaning, so they are explicitly labeled as first/second
