@@ -91,3 +91,36 @@ interpreted as today's training/health objective or as an endorsed target.
   experimental estimate pipeline before any notebook deletion.
 - The catalogue maps every notebook figure to its destination or explicit
   supersession/hold in `docs/measurement_notebook_audit.md`.
+
+
+## Show the values inferred for missing measurement fields
+
+The inferred measurements are already stored by the post-ingest predictor graph.
+Use the **same existing figures**, this time over the measured-or-estimated
+values on each original measurement date:
+
+```bash
+cd ~/Documents/food
+export FOOD_HEALTH_MEASUREMENTS_SHEET_ID="<canonical sheet id>"
+
+# If needed, refresh only the private derived estimates:
+.venv/bin/python -m food_health measurements-enrich
+
+# Main user-facing command: observed + estimated on existing dates
+.venv/bin/python -m food_health measurements-dashboard --include-estimates
+xdg-open .local/reports/measurement-atlas-enriched/index.html
+```
+
+This renders a **separate report** at `.local/reports/measurement-atlas-enriched/`
+and does not replace the observed-only report under `measurement-atlas/`.
+Both retain the original dates and source rows. The HTML warns that charts,
+summaries, correlations and regressions combine observed values with
+same-row model estimates. Model uncertainty and full per-field provenance
+are available from the private `measurements-enriched.json` sidecar, though
+the initial quick-look charts do not visualize uncertainty bands separately.
+
+The charts retain their original visual style. Some PNG plot labels use the
+older wording "observed", but in this variant those points can include
+estimated values; the HTML banner and private manifest identify the mode.
+Do not treat old-scale Body Fat / Muscle proxy estimates as current direct
+measurements. See `docs/measurement_enrichment.md`.

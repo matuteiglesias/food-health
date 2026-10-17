@@ -326,6 +326,33 @@ def _write_index(folder, sections, raw, daily, extra):
         )
         return f'<section><h2>{escape(label)} <small>{len(items)} plots</small></h2><div class="gallery">{entries}</div></section>'
     content="".join(group(title, items) for title,items in sections.items())
+    is_enriched = extra.get("data_mode") == "enriched"
+    report_title = "Measurement Atlas — Enriched" if is_enriched else "Measurement Atlas"
+    report_intro = (
+        "This local exploratory variant includes observed values AND model estimates "
+        "of missing fields on the same dates. Estimated values are not measurements; "
+        "no dates have been inserted."
+        if is_enriched else
+        "Rebuilt from the canonical Personal Measurements spreadsheet and private local SQLite. "
+        "Every chart is generated from observed values unless explicitly labeled as derived "
+        "or a descriptive in-sample regression."
+    )
+    report_notice = (
+        "ENRICHED VIEW: all chart statistics, correlations and fits here combine "
+        "direct measurements with conditional kernel estimates. PNG captions that "
+        "say observed reflect the original chart code, but here may include estimates. "
+        "These guesses are exploratory, not new direct readings or clinical measurements; "
+        "the old scale's body-fat/muscle proxy is especially uncertain after 2023. "
+        "No additional dates were created."
+        if is_enriched else
+        "Missing days are not zero. Trends use only measured days; within-day "
+        "duplicates are averaged solely for plotting. Body composition percentages "
+        "are instrument estimates, and fitted lines are descriptive, not predictions. "
+        "Archive activity is not today's training record. These private files "
+        "must not be uploaded to a public repository."
+    )
+    if is_enriched:
+        content = '<div class="notice"><strong>Estimated field values included: '+str(extra.get("estimated_value_count", 0))+'</strong> — Please interpret apparent smoother trends and higher correlations cautiously: some data points were model-estimated.</div>' + content
     if extra.get("legacy_goals_comparison"):
         content = '<div class="notice"><strong>Historical goals enabled:</strong> targets were loaded from a private archived CSV. They are NOT current health, fitness or body-weight prescriptions.</div>' + content
     comparisons=extra.get("period_comparisons",[])
@@ -364,7 +391,7 @@ def _write_index(folder, sections, raw, daily, extra):
     last=raw["date"].max().date().isoformat()
     html=f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Food · Health | Measurement Atlas</title>
+<title>Food · Health | {escape(report_title)}</title>
 <style>
 :root{{--ink:#22313d;--paper:#f5f7f7;--teal:#08737e;--muted:#647582}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 system-ui,-apple-system,Arial,sans-serif}}
@@ -378,13 +405,13 @@ small{{color:#72858b;font-weight:400;font-size:14px}}.gallery{{display:grid;grid
 .tile img{{width:100%;display:block;object-fit:contain;max-height:490px;background:white}}
 .caption{{font-size:14px;padding:9px 16px;color:#324e57}}
 .table-wrap{{overflow:auto;background:white;padding:16px;border-radius:9px}}table{{border-collapse:collapse;width:100%;min-width:650px}}th,td{{text-align:left;border-bottom:1px solid #e0e5e7;padding:7px 12px}}th{{background:#e8f1f3}}details summary{{cursor:pointer;font-size:18px;font-weight:650;padding:12px}}footer{{color:#70848b;margin-top:40px}}
-</style></head><body><header><h1>Measurement Atlas</h1>
-<p>Rebuilt from the canonical Personal Measurements spreadsheet and private local SQLite. Every chart is generated from observed values unless explicitly labeled as derived or a descriptive in-sample regression.</p>
+</style></head><body><header><h1>{escape(report_title)}</h1>
+<p>{escape(report_intro)}</p>
 <div class="stats"><div class="stat"><strong>{len(raw)}</strong>source observation rows</div>
 <div class="stat"><strong>{len(daily)}</strong>unique calendar dates</div>
 <div class="stat"><strong>{escape(first)} → {escape(last)}</strong>date coverage</div>
 <div class="stat"><strong>{extra.get("chart_count",0)}</strong>charts</div></div></header>
-<main><div class="notice"><strong>How to interpret</strong> — Missing days are not zero. Trends use only measured days; within-day duplicates are averaged solely for plotting. Body composition percentages are instrument estimates, and fitted lines are descriptive, not predictions. Archive activity is not today's training record. These private files must not be uploaded to a public repository.</div>
+<main><div class="notice"><strong>How to interpret</strong> — {escape(report_notice)}</div>
 {content}
 <footer>Generated locally {escape(extra["generated_utc"])} · No network request or source-sheet changes · Data and images remain in ignored .local/</footer></main></body></html>"""
     target=folder/"index.html"
@@ -395,8 +422,12 @@ small{{color:#72858b;font-weight:400;font-size:14px}}.gallery{{display:grid;grid
     return target
 
 
-def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None, goals_file=None):
+def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None, goals_file=None, data_mode="observed", estimated_value_count=0):
     """Generate rich, privacy-preserving HTML/PNG atlas from SQLite records."""
+    if data_mode not in ("observed", "enriched"):
+        raise ValueError("Unsupported report data mode")
+    if type(estimated_value_count) is not int or estimated_value_count < 0:
+        raise ValueError("Invalid estimated value count")
     from .plot_data import observed_frames,observation_counts
     plt,_,_=_mpl()
     plt.rcParams.update({
@@ -428,7 +459,7 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
         comparison=compare_goals(daily,historical_goals)
     observed_fields=[field for field in METRICS if field in raw and raw[field].notna().sum()>=3]
     sections=defaultdict(list)
-    sections["Overview"].append(("Observed trajectories",_overview(output,daily,records)))
+    sections["Overview"].append(("Observed + estimated trajectories" if data_mode == "enriched" else "Observed trajectories",_overview(output,daily,records)))
     sections["Overview"].append(("Historical coverage",_coverage(output,raw,observed_fields)))
     sections["Overview"].append(("Body composition (estimates)",_body_comp(output,daily)))
     sections["Overview"].append(("Anthropometric ratios",_ratios(output,daily)))
@@ -470,6 +501,8 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
         "pairwise_correlations":pairwise_correlations(daily,["Weight","Body Fat","Muscle","Waist","Belly","Hips","Chest","Arm"]),
         "legacy_goals_comparison":comparison,
         "schema_version": 1,
+        "data_mode": data_mode,
+        "estimated_value_count": estimated_value_count,
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "Personal Measurements / MEDIDAS · private SQLite projection",
         "source_rows":len(raw),"unique_dates":len(daily),
@@ -480,7 +513,11 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
         "chart_count":sum(len(items) for items in sections.values()),
         "activity_archive_rows":activity_rows,
         "chart_sections":{name:[file for _,file in items] for name,items in sections.items()},
-        "semantics": "observed-only, descriptive derived measures; no filled calendar dates",
+        "semantics": (
+            "observed plus kernel-estimated missing fields on existing dates; no new dates"
+            if data_mode == "enriched"
+            else "observed-only, descriptive derived measures; no filled calendar dates"
+        ),
     }
     meta=output/"manifest.json"
     temp=output/".manifest.tmp"
