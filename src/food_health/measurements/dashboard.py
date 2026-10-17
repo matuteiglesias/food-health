@@ -406,6 +406,19 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
     output=Path(output_dir).expanduser().resolve()
     output.mkdir(parents=True,exist_ok=True,mode=0o700)
     os.chmod(output,0o700)
+    previous_figures = set()
+    previous_manifest = output / "manifest.json"
+    if previous_manifest.is_file():
+        try:
+            prior = json.loads(previous_manifest.read_text(encoding="utf-8"))
+            if prior.get("schema_version") == 1:
+                previous_figures = {
+                    item for group in prior.get("chart_sections", {}).values()
+                    for item in group if isinstance(item, str)
+                    and item.endswith(".png") and Path(item).name == item
+                }
+        except (ValueError, TypeError):
+            pass  # No deletion without a valid previous provenance manifest.
     raw,daily=observed_frames(records,height_m=height_m)
     historical_goals=None
     comparison=[]
@@ -475,4 +488,11 @@ def generate_dashboard(records, *, output_dir, height_m=None, activity_file=None
     os.chmod(temp,0o600)
     os.replace(temp,meta)
     index=_write_index(output,sections,raw,daily,metadata)
+    current_figures = {item for group in metadata["chart_sections"].values() for item in group}
+    for obsolete in previous_figures - current_figures:
+        # Remove only previously reported generated PNGs; do not touch other
+        # files in the user's private directory.
+        artifact = output / obsolete
+        if artifact.is_file() and not artifact.is_symlink():
+            artifact.unlink()
     return {"index":index,"manifest":meta,"figures":metadata["chart_count"],"source_rows":len(raw),"activity_rows":activity_rows}
