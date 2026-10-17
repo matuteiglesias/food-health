@@ -33,3 +33,24 @@ rejected before overwriting an established snapshot.
 Next stages: canonical food/stock-only CLI sync and offline summaries,
 possible cross-source reconciliation, then `nutrition.substitutes`.
 The archived notebooks are kept until an explicit migration gate passes.
+
+## CLI usage (local only)
+
+After configuring the two spreadsheet IDs and external application-default
+service account credentials, run:
+
+```bash
+cd ~/Documents/food
+export GOOGLE_APPLICATION_CREDENTIALS="$PWD/secret/<service-account-key>.json"
+export FOOD_HEALTH_FOOD_SHEET_ID="<Food canonical spreadsheet ID>"
+export FOOD_HEALTH_STOCK_SHEET_ID="<Household Stock canonical spreadsheet ID>"
+.venv/bin/python -m food_health food-sync
+.venv/bin/python -m food_health food-sync  # expect changed=false
+.venv/bin/python -m food_health food-summary
+```
+
+`food-sync` validates that all active recipe items resolve into the canonical
+nutrient catalog and that the requested seven nutrient quantities are computable,
+before replacing the local snapshot. It prints only counts and a change flag.
+The result `.local/food-stock.json` contains private planning and stock data
+and must not be committed or published.
