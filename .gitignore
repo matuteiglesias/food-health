@@ -5,6 +5,8 @@
 /.local/
 /.secrets/
 /credentials/
+/secret/
+/secrets/
 /reports/private/
 .env
 .env.*
