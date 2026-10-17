@@ -71,7 +71,18 @@ class DashboardTests(unittest.TestCase):
         records=synthetic_observations(12)
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)/".local"/"reports"/"atlas"
+            root.mkdir(parents=True,exist_ok=True)
+            obsolete=root/"old-generated.png"
+            obsolete.write_bytes(b"old chart output")
+            user_file=root/"personal-keep.png"
+            user_file.write_bytes(b"not managed by report")
+            (root/"manifest.json").write_text(json.dumps({
+                "schema_version":1,
+                "chart_sections":{"Previous":["old-generated.png"]}
+            }))
             report=generate_dashboard(records,output_dir=root)
+            self.assertFalse(obsolete.exists())
+            self.assertTrue(user_file.exists())
             self.assertGreaterEqual(report["figures"],10)
             self.assertTrue(report["index"].is_file())
             self.assertEqual(stat.S_IMODE(root.stat().st_mode),0o700)
@@ -80,8 +91,10 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(man["source_rows"],12)
             self.assertEqual(man["unique_dates"],12)
             self.assertEqual(man["activity_archive_rows"],0)
-            self.assertEqual(len(list(root.glob("*.png"))),report["figures"])
+            self.assertEqual(len(list(root.glob("*.png")))-1,report["figures"])
             for p in root.glob("*.png"):
+                if p==user_file:
+                    continue
                 self.assertGreater(p.stat().st_size,1000)
                 self.assertEqual(stat.S_IMODE(p.stat().st_mode),0o600)
             html=report["index"].read_text()
