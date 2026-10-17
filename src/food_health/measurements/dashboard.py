@@ -304,6 +304,8 @@ def _write_index(folder, sections, raw, daily, extra):
         )
         return f'<section><h2>{escape(label)} <small>{len(items)} plots</small></h2><div class="gallery">{entries}</div></section>'
     content="".join(group(title, items) for title,items in sections.items())
+    if extra.get("legacy_goals_comparison"):
+        content = '<div class="notice"><strong>Historical goals enabled:</strong> targets were loaded from a private archived CSV. They are NOT current health, fitness or body-weight prescriptions.</div>' + content
     comparisons=extra.get("period_comparisons",[])
     yearly=extra.get("yearly_summary",[])
     def table_row(parts):
