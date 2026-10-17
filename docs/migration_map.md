@@ -8,7 +8,7 @@ is canonical; local historic CSVs are **not** replayed into it.
 | --- | --- | --- | --- |
 | `Measurements.ipynb` | DUPLICATE | `measurements.activity`, `dashboard` | Identical notebook source code; redundant copy |
 | `01 - Dias Actividad.ipynb` | HISTORICAL CHARTS MIGRATED | `measurements.activity`, `dashboard` | Current training event log remains distinct |
-| `02 - interpolacion medidas.ipynb` | PARTIAL | `measurements.analytics`, `plot_data`, Atlas | Isolated experimental imputation/simulation, regression parity |
+| `02 - interpolacion medidas.ipynb` | PARTIAL | `measurements.analytics`, `plot_data`, `enrichment`, Atlas | Model-based missing-only kernel inference implemented; historical stochastic fills/group-based estimators and visual parity still open |
 | `03 - plot time series.ipynb` | CHARTS MIGRATED | `measurements.dashboard`, `analysis_tables`, `goals` | Visual acceptance; interpolated smoothing intentionally superseded |
 | `04 - plots_advanced.ipynb` | CHARTS MIGRATED | `measurements.dashboard`, `plot_data` | Visual acceptance; experimental old offsets deliberately retired |
 | `nutrientes.ipynb` | PARTIAL | `nutrition.composition` | Optimization experiments, diagnostics, further nutrient outputs |
