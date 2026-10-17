@@ -15,7 +15,7 @@ is canonical; local historic CSVs are **not** replayed into it.
 | `nutrientes 24.ipynb` | PARTIAL | `nutrition.composition`, `nutrition.optimize` | Compare remaining solver variants, iteration diagnostics and chart outputs |
 | `dieta.ipynb` | PARTIAL | `nutrition.composition`, `nutrition.optimize` | Meal suggestions, alternate random-search experiments, notebook output parity |
 | `compras.ipynb` | PARTIAL | `nutrition.composition.scale_quantities` | Stock reconciliation and shopping projection |
-| `legacy_23/substitutes.ipynb` | PENDING | — | Similarity metrics and food substitution |
+| `legacy_23/substitutes.ipynb` | PARTIAL | `nutrition.substitutes` | Pairplot visualizations, non-nutrient filters and workflow validation |
 | `tickets/ocr.ipynb` | PENDING | — | Private OCR pipeline and extraction validation |
 | `printer dias de semana.ipynb` | PENDING / low priority | — | Only migrate if useful to operations |
 | `.ipynb_checkpoints/Measurements-checkpoint.ipynb` | HOLD / checkpoint | — | Classify duplicate and retain only if needed |
