@@ -146,6 +146,31 @@ def _kernel_predict(train_x, train_y, center, *, allow_extrapolation=False):
     return predicted, dispersion, effective, float(np.min(distances))
 
 
+def _kernel_quantiles(train_x, train_y, center):
+    """Kernel-weighted empirical conditional quantiles (descriptive, uncalibrated).
+
+    These are *not* Bayesian posteriors and do not account for measurement
+    noise or drift. The separate predictive band accounts heuristically for
+    observed chronological holdout error and historical staleness.
+    """
+    scales=np.std(train_x,axis=0)
+    scales=np.where(scales>=1e-6,scales,1.0)
+    means=np.mean(train_x,axis=0)
+    distances=np.sqrt(np.sum(((train_x-np.asarray(center))/scales)**2,axis=1))
+    weights=np.exp(-0.5*(distances/FEATURE_BANDWIDTH)**2)
+    ordering=np.argsort(train_y)
+    vals=train_y[ordering]
+    wgts=weights[ordering]
+    total=float(wgts.sum())
+    if total<1e-12:
+        return None
+    cdf=np.cumsum(wgts)/total
+    return {
+        key:float(np.interp(q,cdf,vals))
+        for key,q in (("p10",0.10),("p50",0.50),("p90",0.90))
+    }
+
+
 def _quantile90(residuals):
     if not residuals:
         return None
@@ -255,6 +280,12 @@ def infer_missing(rows: list[dict]) -> dict:
             # still an *explicit low-confidence* educated guess.
             best=max(choices,key=lambda x:(x[0]>=.05,x[0],x[1]))
             skill,_,model,center,local_sd,effective,nearest=best
+            conditional=_kernel_quantiles(
+                model["trained_x"],model["trained_y"],
+                [observed[f] for f in model["features"]],
+            )
+            if conditional is None:
+                continue
             gap=max(0,(date_value - date.fromisoformat(model["last_target_date"])).days)
             # Deliberately inflate retrospective error bands as transfer becomes
             # stale; heuristic, not a measured coverage probability.
@@ -278,6 +309,13 @@ def infer_missing(rows: list[dict]) -> dict:
                 "source_type":"old_scale_proxy" if target in BODY_DEVICE else "body_circumference_or_weight",
                 "confidence":confidence,
                 "band_semantics":"heuristic predictive range; not guaranteed 90% coverage",
+                "conditional_distribution":{
+                    "method":"kernel_weighted_empirical_cdf",
+                    "p10":round(conditional["p10"],5),
+                    "p50":round(conditional["p50"],5),
+                    "p90":round(conditional["p90"],5),
+                    "semantics":"uncalibrated conditional source-value quantiles; not Bayesian posterior",
+                },
                 "training_rows":model["train_rows"],
                 "validation_days":model["calibration_size"],
                 "holdout_mae":round(model["val_mae"],5),
