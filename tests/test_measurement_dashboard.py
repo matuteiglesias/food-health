@@ -96,6 +96,37 @@ class DashboardTests(unittest.TestCase):
 
 
 
+class ChartGapTests(unittest.TestCase):
+    def test_rolling_line_does_not_connect_unmeasured_months(self):
+        from datetime import date, timedelta
+        import matplotlib.pyplot as plt
+        from food_health.measurements.dashboard import _rolling
+
+        dates = [
+            date(2023,1,1)+timedelta(days=i) for i in range(4)
+        ] + [
+            date(2023,7,1)+timedelta(days=i) for i in range(4)
+        ]
+        rows = [
+            {"date":d.isoformat(), "source_row":i+4,
+             "observed":{"Weight":75.0+i/10}}
+            for i,d in enumerate(dates)
+        ]
+        fig, ax = plt.subplots()
+        try:
+            _rolling(ax, rows, "Weight")
+            self.assertGreaterEqual(len(ax.lines), 2)
+            for line in ax.lines:
+                xs=list(line.get_xdata())
+                self.assertLessEqual(
+                    max((xs[i]-xs[i-1]).days for i in range(1,len(xs)))
+                    if len(xs)>1 else 0,
+                    30,
+                )
+        finally:
+            plt.close(fig)
+
+
 class PrivacyGuardTests(unittest.TestCase):
     def test_cli_refuses_unignored_public_destination_before_read(self):
         from unittest.mock import patch
