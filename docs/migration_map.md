@@ -6,11 +6,11 @@ is canonical; local historic CSVs are **not** replayed into it.
 
 | Original notebook | Status (2026-10-17) | New implementation | Missing exit-gate capability |
 | --- | --- | --- | --- |
-| `Measurements.ipynb` | HOLD / duplicate candidate | — | Compare plot/activity output with `01 - Dias Actividad` |
-| `01 - Dias Actividad.ipynb` | PENDING | — | Activity-day plot, input semantics |
-| `02 - interpolacion medidas.ipynb` | PARTIAL | `measurements.analytics` | Fitting, explicit estimation channel, testable parity |
-| `03 - plot time series.ipynb` | PARTIAL | `measurements.trends`, `measurements.report` | Year-by-year plots, boxplots, alternative smoothing |
-| `04 - plots_advanced.ipynb` | PARTIAL | `measurements.analytics` | Scatterplots, regression, extended comparisons |
+| `Measurements.ipynb` | DUPLICATE | `measurements.activity`, `dashboard` | Identical notebook source code; redundant copy |
+| `01 - Dias Actividad.ipynb` | HISTORICAL CHARTS MIGRATED | `measurements.activity`, `dashboard` | Current training event log remains distinct |
+| `02 - interpolacion medidas.ipynb` | PARTIAL | `measurements.analytics`, `plot_data`, Atlas | Isolated experimental imputation/simulation, regression parity |
+| `03 - plot time series.ipynb` | CHARTS MIGRATED | `measurements.dashboard`, `analysis_tables`, `goals` | Visual acceptance; interpolated smoothing intentionally superseded |
+| `04 - plots_advanced.ipynb` | CHARTS MIGRATED | `measurements.dashboard`, `plot_data` | Visual acceptance; experimental old offsets deliberately retired |
 | `nutrientes.ipynb` | PARTIAL | `nutrition.composition` | Optimization experiments, diagnostics, further nutrient outputs |
 | `nutrientes 24.ipynb` | PARTIAL | `nutrition.composition`, `nutrition.optimize` | Compare remaining solver variants, iteration diagnostics and chart outputs |
 | `dieta.ipynb` | PARTIAL | `nutrition.composition`, `nutrition.optimize` | Meal suggestions, alternate random-search experiments, notebook output parity |
@@ -18,7 +18,7 @@ is canonical; local historic CSVs are **not** replayed into it.
 | `legacy_23/substitutes.ipynb` | PARTIAL | `nutrition.substitutes` | Pairplot visualizations, non-nutrient filters and workflow validation |
 | `tickets/ocr.ipynb` | PENDING | — | Private OCR pipeline and extraction validation |
 | `printer dias de semana.ipynb` | PENDING / low priority | — | Only migrate if useful to operations |
-| `.ipynb_checkpoints/Measurements-checkpoint.ipynb` | HOLD / checkpoint | — | Classify duplicate and retain only if needed |
+| `.ipynb_checkpoints/Measurements-checkpoint.ipynb` | CHARTS MIGRATED | `measurements.dashboard`, `plot_data`, `goals` | Historical estimators and goals opt-in; visual review |
 
 ## Retirement gate
 A notebook may be tagged **RETIRE-READY** only when every desired output/function
@@ -28,3 +28,5 @@ in cold archive; irreversible deletion requires separate human approval.
 
 Priorities: measurements stable -> nutrition composition/optimizer -> inventory ->
 training event logging -> receipts. Do not open all workstreams at once.
+
+See `docs/measurement_notebook_audit.md` for cell-by-cell disposition and exact coverage of the measurement notebook visuals. No original notebook has been deleted.

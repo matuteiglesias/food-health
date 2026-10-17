@@ -16,11 +16,14 @@ def _sheet_id(explicit_id: str | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="food-health")
-    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report", "food-sync", "food-summary"])
+    parser.add_argument("command", choices=["doctor", "measurements-sync", "measurements-summary", "measurements-report", "measurements-dashboard", "food-sync", "food-summary"])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--db", type=Path, help="Private local SQLite snapshot path")
     parser.add_argument("--sheet-id", help="Canonical spreadsheet ID (prefer private environment)")
     parser.add_argument("--height-m", type=float, help="Optional height in meters for BMI")
+    parser.add_argument("--output-dir", type=Path, help="Private destination directory for dashboard")
+    parser.add_argument("--no-legacy-activity", action="store_true", help="Skip archived 2022–2023 activity plot")
+    parser.add_argument("--legacy-goals-file", type=Path, help="Explicit opt-in: compare against archived goal CSV (not current goals)")
     args = parser.parse_args(argv)
     root = args.root.resolve()
 
@@ -90,6 +93,24 @@ def main(argv: list[str] | None = None) -> int:
             f"duplicate_dates={result.duplicate_dates}"
         )
         print("Canonical Google Sheet not modified; private local state updated")
+        return 0
+
+    if args.command == "measurements-dashboard":
+        from .measurements.snapshot import load_snapshot
+        from .measurements.dashboard import generate_dashboard
+
+        out = args.output_dir or (root / ".local" / "reports" / "measurement-atlas")
+        # This repository is public. Never write personal report content to a
+        # user-supplied path outside the ignored .local hierarchy.
+        if not out.resolve().is_relative_to((root / ".local").resolve()):
+            raise ValueError("Private dashboard output must be inside <root>/.local/")
+        records = load_snapshot(db_path, source_id=source_id)
+        archive_activity = root / "archive" / "legacy" / "legacy_23" / "volume.csv"
+        activity_file = None if args.no_legacy_activity else archive_activity
+        receipt = generate_dashboard(records, output_dir=out, height_m=args.height_m, activity_file=activity_file, goals_file=args.legacy_goals_file)
+        print(f"PRIVATE dashboard: {receipt['index']}")
+        print(f"observed_source_rows={receipt['source_rows']} figures={receipt['figures']} archived_activity_days={receipt['activity_rows']}")
+        print("No Google Sheets access/write; no missing-date imputation")
         return 0
 
     if args.command == "measurements-report":

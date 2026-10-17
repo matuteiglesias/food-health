@@ -19,3 +19,25 @@ python3 -m pip install -e .
 No automatic writes to Google Sheets, processing of private data, background jobs, or credential access happen in this bootstrap.
 
 See `docs/architecture.md` and `docs/migration_map.md`.
+
+
+## Private measurements visual report
+
+After a read-only canonical sync (requires the existing private Google service
+account and spreadsheet ID), generate a local image-and-HTML dashboard:
+
+```bash
+export FOOD_HEALTH_MEASUREMENTS_SHEET_ID="<canonical-sheet-id>"
+.venv/bin/python -m food_health measurements-dashboard
+xdg-open .local/reports/measurement-atlas/index.html
+```
+
+This reads the private SQLite snapshot, **not** the legacy measurements CSV,
+and produces an HTML gallery with observed-only per-metric trends, monthly
+distributions, annual overlays, anthropometric relations, coverage, 18/30-day
+changes and optional archive activity. Files stay under Git-ignored
+`.local/reports/measurement-atlas/`. Configure reporting dependencies using
+`pip install -e '.[reports]'` inside a local virtual environment.
+
+See `docs/measurement_atlas.md` for interpretation and options, and
+`docs/measurement_notebook_audit.md` for the explicit notebook-cell port map.
