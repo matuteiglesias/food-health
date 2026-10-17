@@ -33,3 +33,13 @@ adequate or appropriate eating plan.
 No private catalog, actual personal goals or plan outputs are stored in GitHub.
 A future product could provide UI and optional constraint types, but human
 review is required before treating outputs as a food plan.
+
+## Workstation compatibility gate
+
+The local ThinkPad currently has Python 3.10, NumPy 1.26.4 and system
+SciPy 1.8.0, which emits a compatibility warning requiring NumPy <1.25.
+The 32-suite synthetic tests and the archived-plan identity smoke passed, but
+**do not treat this as a supported runtime**. Before regular use, create an
+ignored venv with mutually compatible NumPy, SciPy and pandas versions; test
+in that venv, record versions, and only then merge/deploy this PR. Do not
+modify global system packages or share personal target values in logs.
