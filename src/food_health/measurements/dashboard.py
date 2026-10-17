@@ -87,9 +87,18 @@ def _rolling(ax, records, field: str):
     import pandas as pd
     trend = rolling_observed_mean(records, field, window_days=30, min_days=3)
     if trend:
-        ax.plot(pd.to_datetime([r["date"] for r in trend]),
-                [r["mean"] for r in trend], color="#EF8A49", lw=2,
-                label="Trailing 30 days (observed days only)")
+        dates = pd.to_datetime([r["date"] for r in trend])
+        means = [r["mean"] for r in trend]
+        # A mathematically valid rolling mean may restart after a long gap,
+        # but connecting two disjoint segments falsely implies observation.
+        # Break the line whenever adjacent smoothed points are >30 days apart.
+        left = 0
+        for right in range(1, len(trend) + 1):
+            if right == len(trend) or (dates[right] - dates[right - 1]).days > 30:
+                ax.plot(dates[left:right], means[left:right], color="#EF8A49",
+                        lw=2, label="Trailing 30 days (observed days only)"
+                        if left == 0 else "_nolegend_")
+                left = right
 
 
 def _overview(folder, daily, records):
